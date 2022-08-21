@@ -1,0 +1,124 @@
+% This is the top file.
+clc;
+  clear all;
+close all;
+%% Load data
+data = load('semeion.data');
+Xorig = data(:,1:256);
+Yorig = data(:,257:end);
+
+% Shuffle the data
+% random_order = randperm(size(Xorig,1));
+%X = Xorig(random_order,:);
+%Y = Yorig(random_order,:);
+X = Xorig;
+Y = Yorig;
+
+
+% Training data
+X_train = X(1:1100,:);
+Y_train = Y(1:1100,:);
+
+
+% Testing data
+X_test = X(1101:end,:);
+Y_test = Y(1101:end,:);
+
+% Hidden layer neurons
+% Tweak it for optimization
+hidden_neurons = 512;
+
+% Training the model
+[parameters, Ytrain_hat]= ELM_train(X_train,Y_train,hidden_neurons);
+
+% Check training accuracy
+train_acc = check_acc(Ytrain_hat,Y_train);
+
+% Testing the model
+Ytest_hat= ELM_test(X_test, parameters);
+
+% Check testing  accuracy 
+test_acc = check_acc(Ytest_hat,Y_test);
+
+% convert parameter into fixed point
+w10=fi(parameters.W10,1,20,14);
+w21=fi(parameters.W21,1,20,14);
+parameters_fixed.w10=w10;
+parameters_fixed.w21=w21;
+
+
+
+% Testing the model with fixed point value
+Ytest_hat_fixed=ELM_test_fixed(X_test,parameters_fixed);
+
+% Check testing accuracy with fixed point parameters
+test_acc_fixed=check_acc(Ytest_hat_fixed,Y_test);
+
+%To show the the handwritten digit
+digit = reshape(X(125,:),16,16);
+imshow(digit)
+
+
+%additional added code by myself
+per_test_verilog=reshape(Xorig(1,:),16,16);
+image_verilog=(Xorig(1,:))';
+
+figure(1)
+imshow(per_test_verilog')
+
+digit_test = reshape(X_test(125,:),16,16);
+
+figure(2)
+imshow(digit_test')
+for k=1:10
+if Ytest_hat(125,k)==1
+    digit_number = k-1;
+end
+end
+
+ if isequal(Ytest_hat(125,:),Y_test(125,:))
+    fprintf('Correct Recognition');
+else
+    fprintf('Wrong Recognition');
+ end
+
+disp(digit_number);
+w21_bin=str2num(w21.bin);
+image=(X_test(125,:))';
+image_result=(Ytest_hat(125,:))';
+fprintf('train_acc');
+disp(train_acc);
+fprintf('test_acc');
+disp(test_acc);
+fprintf('test_acc_fixed');
+disp(test_acc_fixed);
+Perceptron_for_image0=(image_verilog')*(parameters.W10);
+
+sum_input_mul_lfsr=(image_verilog')*(parameters.W10);
+
+
+% W21 for verilog code
+W21_fixed=parameters.W21; 
+W21_vector=zeros(hidden_neurons*10,1);
+for i=1:hidden_neurons
+    for j=1:10
+      W21_vector(10*(i-1)+j)=W21_fixed(i,j);
+    end
+end
+
+%writematrix(double(W21_vector), 'W21_LFSR.txt');
+W21_vector=sfi(W21_vector,16,10);
+W21_LFSR_bin=W21_vector.bin;
+W21_LFSR_hex=dec2hex(bin2dec(W21_LFSR_bin));
+writematrix(W21_LFSR_hex,"W21_LFSR_hex_data");
+
+% preparing syntx of w21 wieght for verilog code
+formatSpec= "13  'd%d : data = 16 'h%s ; \n";
+fileID=fopen([''])
+for location=1:hidden_neurons*10
+ fprintf(fildID,formatSpec,location-1,W21_LFSR_hex(location));
+end
+
+
+       
+
