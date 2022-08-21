@@ -1,0 +1,110 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+module CONTROLLERM3(en_digit,
+                    rst_digit,
+                    en_counter,
+                    rst_counter,
+                    en_acc,
+                    rst_acc,
+                    clk,
+                    rst,
+                    count9,
+                    leq,
+                    gt,
+                    start,
+                    M2done);
+output reg en_digit,
+           rst_digit,
+           en_counter,
+           rst_counter,
+           en_acc,
+           rst_acc;
+input clk,
+      rst,
+      count9,
+      leq,
+      gt,
+      start,
+      M2done;                    
+reg[1:0] ns,
+         ps;
+parameter IDEL=2'b00,
+          COMP=2'b01,
+          DONE=2'b10;
+always @(posedge clk) 
+if(rst)
+ ps<=0;                                      
+else
+ ps<=ns;
+
+always @(*)
+begin
+ case(ps)
+IDEL:begin
+      if(M2done)
+       begin
+        en_digit=1'b0;
+        rst_digit=1'b0;
+        en_counter=1'b0;
+        rst_counter=1'b0;
+        en_acc=1'b0;
+        rst_acc=1'b0;
+        ns=COMP;
+       end
+      else
+       begin
+        en_digit=1'b0;
+        rst_digit=1'b1;
+        en_counter=1'b0;
+        rst_counter=1'b1;
+        en_acc=1'b0;
+        rst_acc=1'b1;
+        ns=IDEL;
+       end
+     end
+COMP:begin
+      if(count9)
+       begin
+        en_digit=(gt==1);
+        rst_digit=1'b0;
+        en_counter=1'b0;
+        rst_counter=1'b1;
+        en_acc=1'b0;
+        rst_acc=1'b1;
+        ns=DONE;
+       end
+      else
+       begin
+        en_digit=(gt==1);
+        rst_digit=1'b0;
+        en_counter=1'b1;
+        rst_counter=1'b0;
+        en_acc=1'b1;
+        rst_acc=1'b0;
+        ns=COMP;
+       end
+     end 
+DONE:begin
+        en_digit=1'b0;
+        rst_digit=1'b0;
+        en_counter=1'b0;
+        rst_counter=1'b1;
+        en_acc=1'b0;
+        rst_acc=1'b1;
+        if(start)
+         ns=IDEL;
+        else
+         ns=DONE;
+     end 
+default:begin
+        en_digit=1'b0;
+        rst_digit=1'b1;
+        en_counter=1'b0;
+        rst_counter=1'b1;
+        en_acc=1'b0;
+        rst_acc=1'b1;
+        ns=IDEL;
+        end               
+ endcase
+end
+endmodule
